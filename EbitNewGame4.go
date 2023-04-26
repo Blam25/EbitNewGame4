@@ -6,7 +6,7 @@ import (
 	"log"
 
 	"github.com/hajimehoshi/ebiten/v2"
-	//"github.com/hajimehoshi/ebiten/v2/ebitenutil"
+	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
 )
 
 func main() {
@@ -22,8 +22,10 @@ func main() {
 
 type entity1 struct {
 	id int
-	Position
+	*Position
 	Image
+	Player
+	Speed
 }
 
 type entity2 struct {
@@ -43,29 +45,36 @@ type Position struct {
 	Y int
 }
 
-func (p Position) getX() int {
-	return p.X
+func (p *Position) getPosition() (int, int) {
+	return p.X, p.Y
 }
 
-func (p Position) getY() int {
-	return p.Y
+func (p *Position) setPosition(X, Y int) {
+	p.X = X
+	p.Y = Y
 }
 
 type Image struct {
-	image string
+	image *ebiten.Image
+	op    *ebiten.DrawImageOptions
 }
 
-func (s Image) getImage() string {
+func (s Image) getImage() *ebiten.Image {
 	return s.image
 }
 
+func (s Image) getOp() *ebiten.DrawImageOptions {
+	return s.op
+}
+
 type image interface {
-	getImage() string
+	getImage() *ebiten.Image
+	getOp() *ebiten.DrawImageOptions
 }
 
 type position interface {
-	getX() int
-	getY() int
+	getPosition() (int, int)
+	setPosition(int, int)
 }
 
 type imagepos interface {
@@ -73,13 +82,59 @@ type imagepos interface {
 	position
 }
 
+type player interface {
+	setPlayer()
+}
+
+type Player struct{}
+
+func (Player) setPlayer() {
+
+}
+
+type speed interface {
+	getSpeed() int
+	setSpeed(int)
+}
+
+type Speed struct {
+	speed int
+}
+
+func (s Speed) getSpeed() int {
+	return s.speed
+}
+
+func (s Speed) setSpeed(speed int) {
+	s.speed = speed
+}
+
+type wasd interface {
+	position
+	player
+	speed
+}
+
 var ImagePosSys []imagepos
+var wasds []wasd
 
 func init() {
 
-	ent := E.NewEnt[entity1](entity1{id: E.NewId()})
-	ImagePosSys = append(ImagePosSys, ent)
-	print(ent.getX())
+	var err error
+	image1, _, err := ebitenutil.NewImageFromFile("gopher.png")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	ent := E.NewEnt[entity1](entity1{
+		id:       E.NewId(),
+		Position: &Position{X: 500, Y: 500},
+		Image:    Image{image: image1, op: &ebiten.DrawImageOptions{}},
+		Speed:    Speed{5},
+	})
+	wasds = append(wasds, ent)
+
+	print(ent.Getid())
 
 }
 
@@ -87,46 +142,4 @@ func printImage(entity E.Entity) {
 	if entity, ok := entity.(imagepos); ok {
 		println(entity.getImage())
 	}
-}
-
-type Game struct{}
-
-func (g *Game) Update() error {
-
-	for _, s := range E.Entitys {
-
-		if s, ok := s.(imagepos); ok {
-			println(s.getImage())
-		}
-
-		if s, ok := s.(position); ok {
-			print(s.getX())
-		}
-		if s, ok := s.(position); ok {
-			if z, ok := s.(image); ok {
-				println(z.getImage())
-				println("hej")
-				println(s.getY())
-			}
-		}
-		/*
-			if s, ok := s.(image); ok {
-				printHej := true
-			}
-
-			if s, ok := s.(position); ok {
-				printHej := true
-			}
-		*/
-	}
-
-	return nil
-}
-
-func (g *Game) Draw(screen *ebiten.Image) {
-
-}
-
-func (g *Game) Layout(outsideWidth, outsideHeight int) (screenWidth, screenHeight int) {
-	return 640, 480
 }
